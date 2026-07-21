@@ -1,4 +1,46 @@
-*.pyc
+# Python
 __pycache__/
+*.py[cod]
+*.pyo
 *.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtualenv / pyenv
+.venv/
+venv/
+env/
+.python-version
+
+# Env vars
 .env
+.env.*
+!.env.example
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Mypy
+.mypy_cache/
+
+# SQLite (dev local)
+*.db
+*.db-shm
+*.db-wal
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
