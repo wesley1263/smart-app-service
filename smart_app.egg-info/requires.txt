@@ -4,6 +4,7 @@ pydantic>=2.7
 pydantic-settings>=2.3
 tortoise-orm[asyncpg]>=0.21
 aerich>=0.7
+loguru>=0.7
 
 [dev]
 pytest>=8.2
