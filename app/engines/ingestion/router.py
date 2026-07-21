@@ -1,14 +1,21 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.engines.ingestion import schemas, service
+from app.engines.ingestion import schemas
+from app.engines.ingestion.service import IngestionService, get_ingestion_service
 
 router = APIRouter(prefix="/chapters", tags=["ingestion"])
 
+ServiceDep = Annotated[IngestionService, Depends(get_ingestion_service)]
+
 
 @router.post("", response_model=schemas.ChapterResponse, status_code=201)
-async def create_chapter(payload: schemas.ChapterCreateRequest) -> schemas.ChapterResponse:
+async def create_chapter(
+    payload: schemas.ChapterCreateRequest,
+    service: ServiceDep,
+) -> schemas.ChapterResponse:
     chapter = await service.create_chapter(payload)
     return schemas.ChapterResponse(
         chapter_id=chapter.id,
@@ -22,7 +29,10 @@ async def create_chapter(payload: schemas.ChapterCreateRequest) -> schemas.Chapt
 
 
 @router.get("/{chapter_id}", response_model=schemas.ChapterResponse)
-async def get_chapter(chapter_id: UUID) -> schemas.ChapterResponse:
+async def get_chapter(
+    chapter_id: UUID,
+    service: ServiceDep,
+) -> schemas.ChapterResponse:
     chapter = await service.get_chapter(chapter_id)
     if chapter is None:
         raise HTTPException(status_code=404, detail="Chapter not found")
