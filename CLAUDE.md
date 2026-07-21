@@ -9,10 +9,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Protocolo de trabalho (seguir sempre)
 
 1. **Analisar** — ler o código atual relevante antes de propor qualquer mudança.
-2. **Branch** — criar branch com prefixo adequado (`feat/`, `fix/`, `bugfix/`, `hotfix/`, `refact/`, `test/`). Nunca commitar sem pedido explícito.
-3. **Red → Green** — escrever o teste (que vai falhar) antes do código mínimo para ele passar.
-4. **Lint** — rodar `docker compose run --rm lint` e corrigir tudo antes de considerar a task concluída.
-5. **Changelog** — atualizar `CHANGELOG.md` ao final (formato Keep a Changelog).
+2. **Spec → Task** — toda mudança não trivial exige spec em `specs/` e task em `tasks/`. Se a spec está incompleta, completá-la primeiro usando `specs/_template.md`; tasks usam `tasks/_template.md`.
+3. **Branch** — criar branch com prefixo adequado (`feat/`, `fix/`, `bugfix/`, `hotfix/`, `refact/`, `test/`). Nunca commitar sem pedido explícito.
+4. **Red → Green** — escrever o teste (que vai falhar) antes do código mínimo para ele passar.
+5. **Lint** — rodar `docker compose run --rm lint` e corrigir tudo antes de considerar a task concluída.
+6. **Changelog** — atualizar `CHANGELOG.md` ao final (formato Keep a Changelog).
 
 **Regra absoluta:** toda execução de comandos usa Docker Compose, nunca o host local. Testes rodam com `docker compose run --rm test`.
 

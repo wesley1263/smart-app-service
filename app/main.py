@@ -4,14 +4,23 @@ from tortoise.contrib.fastapi import register_tortoise
 from app.core.config import get_settings
 from app.core.db import TORTOISE_ORM
 
+from app.engines.ingestion.router import router as ingestion_router
+
 app = FastAPI(title="Smart App API", version="0.0.1")
+
+_settings = get_settings()
+# generate_schemas=True apenas em SQLite (testes em memória); em produção o Aerich gerencia.
+_generate_schemas = _settings.database_url.startswith("sqlite")
 
 register_tortoise(
     app,
     config=TORTOISE_ORM,
-    generate_schemas=False,  # schema é sempre via migração Aerich, nunca auto-gerado em runtime
+    generate_schemas=_generate_schemas,
     add_exception_handlers=True,
 )
+
+
+app.include_router(ingestion_router)
 
 
 @app.get("/health")
