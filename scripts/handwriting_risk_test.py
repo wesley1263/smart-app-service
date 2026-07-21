@@ -8,8 +8,13 @@ Uso:
         --input fotos/ \\
         --gabarito gabarito.json \\
         [--threshold 0.65] \\
-        [--model claude-haiku-4-5-20251001] \\
+        [--model gemini/gemini-2.0-flash] \\
         [--output resultado.json]
+
+O script é agnóstico de provider via LiteLLM. Passe qualquer modelo suportado:
+    --model gemini/gemini-2.0-flash   → define GEMINI_API_KEY
+    --model claude-sonnet-5           → define ANTHROPIC_API_KEY
+    --model gpt-4o                    → define OPENAI_API_KEY
 
 Formato do gabarito (JSON):
     {
@@ -28,7 +33,6 @@ from __future__ import annotations
 import argparse
 import base64
 import json
-import os
 import sys
 import time
 from dataclasses import dataclass, field
@@ -36,8 +40,15 @@ from pathlib import Path
 
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
-DEFAULT_MODEL = "claude-haiku-4-5-20251001"
+DEFAULT_MODEL = "gemini/gemini-2.0-flash"
 DEFAULT_THRESHOLD = 0.65
+
+_PROVIDER_KEY_HINT = {
+    "gemini/": "GEMINI_API_KEY",
+    "claude": "ANTHROPIC_API_KEY",
+    "gpt-": "OPENAI_API_KEY",
+    "openai/": "OPENAI_API_KEY",
+}
 
 
 # ── Estruturas de dados ────────────────────────────────────────────────────────
@@ -107,7 +118,7 @@ Responda SOMENTE com um objeto JSON neste formato exato, sem markdown:
 # ── Validação de uma foto ──────────────────────────────────────────────────────
 
 def _normalize(keywords: list[str]) -> dict[str, str]:
-    """Mapeia versão lowercase → original para match case-insensitive."""
+    """Mapeia lowercase → original para match case-insensitive."""
     return {kw.lower().strip(): kw for kw in keywords}
 
 
@@ -115,9 +126,10 @@ def validate_photo(
     photo_path: Path,
     node: str,
     expected_keywords: list[str],
-    client: object,
     model: str,
 ) -> PhotoResult:
+    import litellm  # lazy import — falha com mensagem clara se não instalado
+
     base = PhotoResult(
         filename=photo_path.name,
         node=node,
@@ -132,7 +144,7 @@ def validate_photo(
         return base
 
     try:
-        response = client.messages.create(  # type: ignore[attr-defined]
+        response = litellm.completion(
             model=model,
             max_tokens=512,
             messages=[
@@ -140,19 +152,15 @@ def validate_photo(
                     "role": "user",
                     "content": [
                         {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": media_type,
-                                "data": image_data,
-                            },
+                            "type": "image_url",
+                            "image_url": {"url": f"data:{media_type};base64,{image_data}"},
                         },
                         {"type": "text", "text": build_prompt(node, expected_keywords)},
                     ],
                 }
             ],
         )
-        raw = response.content[0].text.strip()
+        raw = response.choices[0].message.content.strip()  # type: ignore[union-attr]
 
         # Remove bloco markdown caso o modelo devolva ```json ... ```
         if raw.startswith("```"):
@@ -168,7 +176,6 @@ def validate_photo(
         base.error = f"Erro na chamada ao modelo: {exc}"
         return base
 
-    # Match case-insensitive entre o que o modelo retornou e o gabarito
     expected_map = _normalize(expected_keywords)
     found_originals: list[str] = []
     for kw in parsed.get("found", []):
@@ -176,12 +183,9 @@ def validate_photo(
         if original and original not in found_originals:
             found_originals.append(original)
 
-    not_found = [kw for kw in expected_keywords if kw not in found_originals]
-    match_score = len(found_originals) / len(expected_keywords) if expected_keywords else 0.0
-
     base.found = found_originals
-    base.not_found = not_found
-    base.match_score = match_score
+    base.not_found = [kw for kw in expected_keywords if kw not in found_originals]
+    base.match_score = len(found_originals) / len(expected_keywords) if expected_keywords else 0.0
     base.notes = parsed.get("notes", "")
     return base
 
@@ -206,7 +210,7 @@ def print_report(results: list[PhotoResult], threshold: float, model: str) -> No
     if valid:
         avg = sum(r.match_score for r in valid) / len(valid)
         rate = len(passed) / len(valid)
-        print(f"  Score médio  : {avg:.1%}")
+        print(f"  Score médio       : {avg:.1%}")
         print(f"  Taxa de aprovação : {len(passed)}/{len(valid)} = {rate:.1%}")
         print()
 
@@ -234,13 +238,13 @@ def print_report(results: list[PhotoResult], threshold: float, model: str) -> No
     print(sep)
 
     if not valid:
-        conclusion = "Nenhuma foto processada. Verifique ANTHROPIC_API_KEY e as imagens."
+        conclusion = "Nenhuma foto processada com sucesso. Verifique a API key e as imagens."
     else:
         rate = len(passed) / len(valid)
         if rate >= 0.80:
             conclusion = "✓ VIÁVEL — modelo adequado para o Evidence Engine."
         elif rate >= 0.60:
-            conclusion = "⚠ MARGINAL — considere aumentar threshold ou testar outro modelo."
+            conclusion = "⚠ MARGINAL — considere outro modelo ou ajustar threshold."
         else:
             conclusion = "✗ INVIÁVEL — taxa insuficiente. Revisar spec 03, seção 9."
 
@@ -255,7 +259,7 @@ def save_json_report(
 ) -> None:
     valid = [r for r in results if not r.error]
     avg = sum(r.match_score for r in valid) / len(valid) if valid else 0.0
-    data = {
+    payload = {
         "model": model,
         "threshold": threshold,
         "summary": {
@@ -281,11 +285,18 @@ def save_json_report(
         ],
     }
     with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        json.dump(payload, f, ensure_ascii=False, indent=2)
     print(f"  Relatório JSON salvo em: {output_path}\n")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
+
+def _api_key_hint(model: str) -> str:
+    for prefix, key in _PROVIDER_KEY_HINT.items():
+        if model.startswith(prefix):
+            return key
+    return "variável de API key do provider"
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -301,9 +312,12 @@ def main() -> None:
     )
     parser.add_argument(
         "--model", default=DEFAULT_MODEL,
-        help=f"Modelo de visão a testar (default: {DEFAULT_MODEL})",
+        help=(
+            f"Modelo no formato LiteLLM (default: {DEFAULT_MODEL}). "
+            "Exemplos: gemini/gemini-2.0-flash, claude-sonnet-5, gpt-4o"
+        ),
     )
-    parser.add_argument("--output", metavar="FILE", help="Salvar relatório detalhado em JSON")
+    parser.add_argument("--output", metavar="FILE", help="Salvar relatório completo em JSON")
     args = parser.parse_args()
 
     input_dir = Path(args.input)
@@ -316,15 +330,10 @@ def main() -> None:
         print(f"Erro: gabarito '{gabarito_path}' não encontrado.", file=sys.stderr)
         sys.exit(1)
 
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        print("Erro: variável de ambiente ANTHROPIC_API_KEY não definida.", file=sys.stderr)
-        sys.exit(1)
-
     try:
-        import anthropic
+        import litellm  # noqa: F401
     except ImportError:
-        print("Erro: pacote 'anthropic' não instalado. Execute: pip install anthropic", file=sys.stderr)
+        print("Erro: pacote 'litellm' não instalado. Execute: pip install litellm", file=sys.stderr)
         sys.exit(1)
 
     try:
@@ -339,9 +348,10 @@ def main() -> None:
         print(f"Nenhuma foto encontrada em '{input_dir}' (extensões aceitas: {exts}).", file=sys.stderr)
         sys.exit(1)
 
-    client = anthropic.Anthropic(api_key=api_key)
-
-    print(f"\nProcessando {len(photos)} foto(s) com '{args.model}' (threshold={args.threshold:.0%})...")
+    hint = _api_key_hint(args.model)
+    print(f"\nModelo : {args.model}")
+    print(f"API key: certifique-se de que {hint} está definida no ambiente.")
+    print(f"Processando {len(photos)} foto(s) (threshold={args.threshold:.0%})...")
 
     results: list[PhotoResult] = []
     for i, photo_path in enumerate(photos, 1):
@@ -356,7 +366,6 @@ def main() -> None:
             photo_path,
             node=entry.get("node", ""),
             expected_keywords=entry["expected_keywords"],
-            client=client,
             model=args.model,
         )
         result.passed = result.match_score >= args.threshold
@@ -367,7 +376,6 @@ def main() -> None:
         else:
             print(f"score={result.match_score:.0%} {'✓' if result.passed else '✗'}")
 
-        # Pausa entre chamadas para evitar rate limit
         if i < len(photos):
             time.sleep(0.5)
 
