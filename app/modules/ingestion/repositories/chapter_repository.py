@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 from app.modules.common.abstracts.repository import CRUDRepository
@@ -5,7 +6,7 @@ from app.modules.ingestion.models.chapter import IngestedChapter, RawSource, Sou
 
 
 class ChapterRepository(CRUDRepository):
-    async def create(self, **kwargs: object) -> IngestedChapter:
+    async def create(self, **kwargs: Any) -> IngestedChapter:
         return await IngestedChapter.create(**kwargs)
 
     async def get_by_id(self, entity_id: UUID) -> IngestedChapter | None:

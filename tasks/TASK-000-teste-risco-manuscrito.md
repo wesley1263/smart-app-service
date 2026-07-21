@@ -24,10 +24,10 @@ Este script existe para decidir, com dados reais, se o modelo de visão escolhid
 
 ## Notas de implementação
 
-- Modelo default: `claude-haiku-4-5-20251001` (mais barato; trocar via `--model` para comparar).
+- Script agnóstico de provider via LiteLLM. Modelo default: `gemini/gemini-2.0-flash`.
 - Gabarito: JSON com `{ "foto.jpg": { "node": "...", "expected_keywords": [...] } }`. Ver `scripts/gabarito_example.json`.
 - Match é case-insensitive; sinônimos contam se o modelo os mapear para o keyword original.
 - `--output resultado.json` salva relatório completo para análise posterior.
-- `ANTHROPIC_API_KEY` deve estar definida no ambiente (ver `.env.example`).
+- API key lida do ambiente conforme provider: `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (ver `.env.example`).
 - Pausa de 0.5s entre fotos para evitar rate limit.
-- Ao rodar: documentar taxa de acerto obtida em `specs/03-evidence-engine.md` seção 9, substituindo a pergunta em aberto pelo modelo escolhido e threshold validado.
+- **Para concluir a task:** rodar o script com fotos reais, colar o `resultado.json` no chat, e o agente documenta a decisão em `specs/03-evidence-engine.md` seção 9.

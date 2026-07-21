@@ -1,4 +1,5 @@
 """Testes do Ingestion Engine — critérios de aceitação da spec 01, seção 8."""
+
 import uuid
 
 from fastapi.testclient import TestClient
@@ -87,7 +88,7 @@ def test_post_chapter_image_source_returns_failed():
 
 
 def test_post_chapter_link_source_returns_failed():
-    """Dado source do tipo link, quando enviado, então status==failed (scraping não implementado)."""
+    """Dado source do tipo link, quando enviado, então status==failed."""
     payload = {
         **CHAPTER_PAYLOAD,
         "sources": [{"type": "link", "raw_ref": "https://example.com/capitulo-1"}],

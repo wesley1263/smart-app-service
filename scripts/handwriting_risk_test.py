@@ -37,6 +37,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, cast
 
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
@@ -53,6 +54,7 @@ _PROVIDER_KEY_HINT = {
 
 # ── Estruturas de dados ────────────────────────────────────────────────────────
 
+
 @dataclass
 class PhotoResult:
     filename: str
@@ -68,7 +70,8 @@ class PhotoResult:
 
 # ── I/O ───────────────────────────────────────────────────────────────────────
 
-def load_gabarito(path: Path) -> dict[str, dict]:
+
+def load_gabarito(path: Path) -> dict[str, dict[str, Any]]:
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
     for fname, entry in data.items():
@@ -76,7 +79,7 @@ def load_gabarito(path: Path) -> dict[str, dict]:
             raise ValueError(f"Gabarito: entrada '{fname}' sem 'expected_keywords'.")
         if not entry["expected_keywords"]:
             raise ValueError(f"Gabarito: '{fname}' tem expected_keywords vazio.")
-    return data
+    return cast(dict[str, dict[str, Any]], data)
 
 
 def encode_image(path: Path) -> tuple[str, str]:
@@ -94,6 +97,7 @@ def encode_image(path: Path) -> tuple[str, str]:
 
 # ── Prompt ─────────────────────────────────────────────────────────────────────
 
+
 def build_prompt(node: str, expected_keywords: list[str]) -> str:
     kw_list = "\n".join(f"  - {kw}" for kw in expected_keywords)
     return f"""Você está validando o caderno/mindmap manuscrito de um estudante.
@@ -105,7 +109,8 @@ Palavras-chave esperadas:
 
 Observe atentamente o conteúdo manuscrito na imagem.
 
-Para cada palavra-chave, verifique se ela aparece na escrita (diretamente ou por sinônimos/variações equivalentes). Seja generoso: grafias alternativas e conceitos expressos com palavras diferentes contam.
+Para cada palavra-chave, verifique se ela aparece na escrita (diretamente ou por sinônimos/variações
+equivalentes). Seja generoso: grafias alternativas e conceitos com palavras diferentes contam.
 
 Responda SOMENTE com um objeto JSON neste formato exato, sem markdown:
 {{
@@ -116,6 +121,7 @@ Responda SOMENTE com um objeto JSON neste formato exato, sem markdown:
 
 
 # ── Validação de uma foto ──────────────────────────────────────────────────────
+
 
 def _normalize(keywords: list[str]) -> dict[str, str]:
     """Mapeia lowercase → original para match case-insensitive."""
@@ -160,7 +166,7 @@ def validate_photo(
                 }
             ],
         )
-        raw = response.choices[0].message.content.strip()  # type: ignore[union-attr]
+        raw = response.choices[0].message.content.strip()
 
         # Remove bloco markdown caso o modelo devolva ```json ... ```
         if raw.startswith("```"):
@@ -191,6 +197,7 @@ def validate_photo(
 
 
 # ── Relatório ─────────────────────────────────────────────────────────────────
+
 
 def print_report(results: list[PhotoResult], threshold: float, model: str) -> None:
     errors = [r for r in results if r.error]
@@ -291,6 +298,7 @@ def save_json_report(
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+
 def _api_key_hint(model: str) -> str:
     for prefix, key in _PROVIDER_KEY_HINT.items():
         if model.startswith(prefix):
@@ -305,13 +313,18 @@ def main() -> None:
         epilog=__doc__,
     )
     parser.add_argument("--input", required=True, metavar="DIR", help="Diretório com as fotos")
-    parser.add_argument("--gabarito", required=True, metavar="FILE", help="JSON com keywords esperadas por foto")
     parser.add_argument(
-        "--threshold", type=float, default=DEFAULT_THRESHOLD,
+        "--gabarito", required=True, metavar="FILE", help="JSON com keywords esperadas por foto"
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=DEFAULT_THRESHOLD,
         help=f"Match mínimo para aprovação (default: {DEFAULT_THRESHOLD})",
     )
     parser.add_argument(
-        "--model", default=DEFAULT_MODEL,
+        "--model",
+        default=DEFAULT_MODEL,
         help=(
             f"Modelo no formato LiteLLM (default: {DEFAULT_MODEL}). "
             "Exemplos: gemini/gemini-2.0-flash, claude-sonnet-5, gpt-4o"
@@ -345,7 +358,10 @@ def main() -> None:
     photos = sorted(p for p in input_dir.iterdir() if p.suffix.lower() in SUPPORTED_EXTENSIONS)
     if not photos:
         exts = ", ".join(sorted(SUPPORTED_EXTENSIONS))
-        print(f"Nenhuma foto encontrada em '{input_dir}' (extensões aceitas: {exts}).", file=sys.stderr)
+        print(
+            f"Nenhuma foto encontrada em '{input_dir}' (extensões aceitas: {exts}).",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     hint = _api_key_hint(args.model)

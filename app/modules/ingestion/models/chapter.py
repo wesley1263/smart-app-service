@@ -22,7 +22,7 @@ class IngestedChapter(Model):
     child_id = fields.UUIDField()
     subject = fields.CharField(max_length=255)
     school_start_date = fields.DateField()
-    segments: fields.Field = fields.JSONField(default=list)
+    segments: list[str] = fields.JSONField(default=list)
     status = fields.CharEnumField(ChapterStatus, default=ChapterStatus.processing)
     reason_code = fields.CharField(max_length=100, null=True)
     created_at = fields.DatetimeField(auto_now_add=True)

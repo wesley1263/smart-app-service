@@ -19,7 +19,11 @@ class CreateChapterUseCase:
         )
 
         for source_in in payload.sources:
-            await self._repository.create_source(chapter, source_in.type, source_in.raw_ref)
+            await self._repository.create_source(
+                chapter,
+                SourceType(source_in.type),
+                source_in.raw_ref,
+            )
 
         text_sources = [s for s in payload.sources if s.type == SourceType.text]
         non_text_sources = [s for s in payload.sources if s.type != SourceType.text]

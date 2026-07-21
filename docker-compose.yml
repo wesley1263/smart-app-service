@@ -41,7 +41,14 @@ services:
     build:
       context: .
       target: dev
-    command: ["pre-commit", "run", "--all-files"]
+    command:
+      - sh
+      - -c
+      - |
+        isort --check-only . &&
+        black --check . &&
+        flake8 app/ scripts/ &&
+        mypy app/ scripts/
     profiles:
       - ci
 
