@@ -6,6 +6,7 @@ settings = get_settings()
 # aqui conforme for implementado (ver AGENTS.md e specs/0X-*.md correspondente).
 MODEL_MODULES = [
     "aerich.models",  # tabela interna de controle de migrações do Aerich
+    "app.engines.ingestion.models",
     # "app.engines.knowledge.models",
     # "app.engines.evidence.models",
     # "app.engines.learning_state.models",

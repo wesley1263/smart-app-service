@@ -1,6 +1,43 @@
-"""Models Tortoise ORM do ingestion Engine — devem espelhar o "Modelo de dados" de specs/*.md correspondente.
+from enum import StrEnum
+from uuid import uuid4
 
-Lembrete (AGENTS.md): versionamento de Learning Node é sempre create() de nova
-linha, nunca update() de conteúdo já validado. Registrar cada model novo em
-app/core/db.py::MODEL_MODULES para o Aerich enxergar no autogenerate.
-"""
+from tortoise import fields
+from tortoise.models import Model
+
+
+class ChapterStatus(StrEnum):
+    processing = "processing"
+    ready = "ready"
+    failed = "failed"
+
+
+class SourceType(StrEnum):
+    image = "image"
+    link = "link"
+    text = "text"
+
+
+class IngestedChapter(Model):
+    id = fields.UUIDField(primary_key=True, default=uuid4)
+    child_id = fields.UUIDField()
+    subject = fields.CharField(max_length=255)
+    school_start_date = fields.DateField()
+    segments: fields.Field = fields.JSONField(default=list)
+    status = fields.CharEnumField(ChapterStatus, default=ChapterStatus.processing)
+    reason_code = fields.CharField(max_length=100, null=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "ingested_chapters"
+
+
+class RawSource(Model):
+    id = fields.UUIDField(primary_key=True, default=uuid4)
+    chapter: fields.ForeignKeyRelation[IngestedChapter] = fields.ForeignKeyField(
+        "models.IngestedChapter", related_name="sources"
+    )
+    type = fields.CharEnumField(SourceType)
+    raw_ref = fields.TextField()
+
+    class Meta:
+        table = "raw_sources"

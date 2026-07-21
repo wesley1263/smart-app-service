@@ -1,14 +1,13 @@
 from functools import lru_cache
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env")
+
     environment: str = "local"
     database_url: str = "postgres://smart_app:smart_app@localhost:5432/smart_app"
-
-    class Config:
-        env_file = ".env"
 
 
 @lru_cache
