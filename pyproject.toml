@@ -1,0 +1,29 @@
+[project]
+name = "smart-app"
+version = "0.0.1"
+description = "Smart App — plataforma de pré-aprendizagem adaptativa"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "tortoise-orm[asyncpg]>=0.21",
+    "aerich>=0.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "aiosqlite>=0.20",
+    "httpx>=0.27",
+]
+
+[tool.aerich]
+tortoise_orm = "app.core.db.TORTOISE_ORM"
+location = "migrations"
+src_folder = "./."
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

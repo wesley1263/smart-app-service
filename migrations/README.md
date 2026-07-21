@@ -1,0 +1,1 @@
+Diretório de migrações Aerich (gerado por 'aerich init-db' na primeira execução e 'aerich migrate' a partir daí). A primeira migração real nasce junto com a implementação de specs/02-knowledge-engine.md (tabela learning_nodes).
