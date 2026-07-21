@@ -15,6 +15,7 @@ dependencies = [
     "tortoise-orm[asyncpg]>=0.21",
     "aerich>=0.7",
     "loguru>=0.7",
+    "anthropic>=0.40",
 ]
 
 [project.optional-dependencies]

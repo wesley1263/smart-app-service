@@ -1,7 +1,7 @@
 # TASK-000 — Validar taxa de acerto de leitura de manuscrito infantil
 
 **Spec:** `specs/00-product-vision.md` (seção 5, "Pré-requisito antes de qualquer código de produto") e `specs/03-evidence-engine.md` (R3, Perguntas em aberto)
-**Status:** todo
+**Status:** em andamento — script implementado, aguarda execução com fotos reais
 **Complexidade estimada:** P
 **Depende de:** nenhuma — é a TASK-000 de propósito, deve rodar antes de qualquer outra.
 
@@ -17,10 +17,17 @@ Este script existe para decidir, com dados reais, se o modelo de visão escolhid
 
 ## Critérios de aceitação
 
-- [ ] Script roda localmente com `python scripts/handwriting_risk_test.py --input <dir> --gabarito <arquivo>`.
-- [ ] Relatório final mostra taxa de acerto agregada e lista de fotos abaixo do threshold com o motivo (se disponível na resposta do modelo).
-- [ ] Não depende de nenhum código de `app/` — é standalone, para não acoplar a decisão de produto a infraestrutura ainda não construída.
-- [ ] Resultado documentado em `specs/03-evidence-engine.md`, seção 9 (Perguntas em aberto), substituindo a pergunta em aberto pela decisão tomada.
+- [x] Script roda localmente com `python scripts/handwriting_risk_test.py --input <dir> --gabarito <arquivo>`.
+- [x] Relatório final mostra taxa de acerto agregada e lista de fotos abaixo do threshold com o motivo (se disponível na resposta do modelo).
+- [x] Não depende de nenhum código de `app/` — é standalone, para não acoplar a decisão de produto a infraestrutura ainda não construída.
+- [ ] Resultado documentado em `specs/03-evidence-engine.md`, seção 9 — **pendente: executar com fotos reais e registrar decisão**.
 
 ## Notas de implementação
-(preencher ao executar)
+
+- Modelo default: `claude-haiku-4-5-20251001` (mais barato; trocar via `--model` para comparar).
+- Gabarito: JSON com `{ "foto.jpg": { "node": "...", "expected_keywords": [...] } }`. Ver `scripts/gabarito_example.json`.
+- Match é case-insensitive; sinônimos contam se o modelo os mapear para o keyword original.
+- `--output resultado.json` salva relatório completo para análise posterior.
+- `ANTHROPIC_API_KEY` deve estar definida no ambiente (ver `.env.example`).
+- Pausa de 0.5s entre fotos para evitar rate limit.
+- Ao rodar: documentar taxa de acerto obtida em `specs/03-evidence-engine.md` seção 9, substituindo a pergunta em aberto pelo modelo escolhido e threshold validado.
