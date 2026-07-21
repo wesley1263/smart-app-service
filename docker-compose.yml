@@ -15,23 +15,33 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    build:
+      context: .
+      target: prod
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
   test:
-    image: python:3.12-slim
-    working_dir: /app
-    volumes:
-      - .:/app
+    build:
+      context: .
+      target: dev
     environment:
       DATABASE_URL: "sqlite://:memory:"
-    command: ["sh", "-c", "pip install -e .[dev] -q && pytest tests/ -q"]
+    command: ["pytest", "tests/", "-q"]
     profiles:
       - ci
 
   lint:
-    image: python:3.12-slim
-    working_dir: /app
-    volumes:
-      - .:/app
-    command: ["sh", "-c", "pip install pre-commit -q && pre-commit run --all-files"]
+    build:
+      context: .
+      target: dev
+    command: ["pre-commit", "run", "--all-files"]
     profiles:
       - ci
 
