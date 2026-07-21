@@ -1,15 +1,15 @@
-from app.core.config import get_settings
+from app.config.settings import get_settings
 
 settings = get_settings()
 
-# Lista de módulos de models Tortoise. Cada motor adiciona seu app/engines/<nome>/models.py
-# aqui conforme for implementado (ver AGENTS.md e specs/0X-*.md correspondente).
+# Cada módulo registra seu models/<entity>.py aqui conforme for implementado.
 MODEL_MODULES = [
-    "aerich.models",  # tabela interna de controle de migrações do Aerich
-    "app.engines.ingestion.models",
-    # "app.engines.knowledge.models",
-    # "app.engines.evidence.models",
-    # "app.engines.learning_state.models",
+    "aerich.models",
+    "app.modules.ingestion.models.chapter",
+    # "app.modules.knowledge.models.node",
+    # "app.modules.evidence.models.evidence",
+    # "app.modules.learning_state.models.state",
+    # "app.modules.generation.models.generation",
 ]
 
 TORTOISE_ORM = {

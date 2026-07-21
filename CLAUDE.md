@@ -44,24 +44,40 @@ pre-commit run --all-files        # equivalente fora do Docker
 
 ## Arquitetura
 
-### 5 motores em `app/engines/<motor>/`
+### Estrutura de módulos — `app/modules/<modulo>/`
 
-Cada motor é um pacote independente com quatro arquivos fixos:
+Cada módulo segue o padrão BoilerplateV2 adaptado para Tortoise:
 
-| Arquivo | Responsabilidade |
-|---|---|
-| `models.py` | Tortoise ORM models — nunca expor direto na resposta HTTP |
-| `schemas.py` | Pydantic v2 — contratos de entrada/saída da API |
-| `service.py` | Lógica de domínio — chamado pelo router, nunca pelo ORM diretamente |
-| `router.py` | FastAPI — registrado em `app/main.py` conforme a spec é implementada |
+```
+app/modules/<modulo>/
+├── models/<entidade>.py          # Tortoise ORM — registrar em app/core/db.py::MODEL_MODULES
+├── dtos.py                       # Pydantic v2 (CreateXxxDto, GetXxxDto)
+├── repositories/<entidade>_repository.py   # herda de common/abstracts/repository.py
+├── use_cases/<acao>_<entidade>.py          # uma classe por operação, método execute()
+└── api/v1/routes.py              # FastAPI router — registrar em app/core/routers.py
+```
 
-Motores: `ingestion` → `knowledge` → `evidence` → `learning_state` → `generation` (fluxo de dados).
+Módulos: `ingestion` → `knowledge` → `evidence` → `learning_state` → `generation`.
+
+### DI Container — `app/core/dependencies.py`
+
+`DependencyInjectionContainer` é o único lugar que instancia repositórios e use cases. Rotas injetam via `Depends(container.<use_case>)`.
+
+```python
+# Padrão de injeção nas rotas
+use_case: Annotated[CreateChapterUseCase, Depends(container.create_chapter)]
+```
+
+### Resposta padrão e erros
+
+- Toda rota retorna `Response[T]` de `app/modules/common/dtos/response.py`.
+- Erros de negócio: lançar `UseCaseException(message, status_code)` nos use cases; a rota converte para `HTTPException`.
 
 ### Registro de models e routers
 
-- **Novo model**: adicionar o módulo em `app/core/db.py::MODEL_MODULES` para o Aerich enxergar.
-- **Novo router**: registrar em `app/main.py` com `app.include_router(...)`.
-- Schema nunca é auto-gerado em runtime (`generate_schemas=False` em `main.py`) — sempre via `aerich migrate && aerich upgrade`.
+- **Novo model**: adicionar `"app.modules.<modulo>.models.<entidade>"` em `app/core/db.py::MODEL_MODULES`.
+- **Novo router**: importar e registrar em `app/core/routers.py::include_routers`.
+- `generate_schemas` é `True` automaticamente quando `DATABASE_URL` começa com `sqlite` (testes); em produção o Aerich gerencia.
 
 ### Banco de dados
 
@@ -71,20 +87,17 @@ Motores: `ingestion` → `knowledge` → `evidence` → `learning_state` → `ge
 
 ### Testes
 
-`tests/conftest.py` define `DATABASE_URL=sqlite://:memory:` via `os.environ.setdefault` **antes** de qualquer import de `app.*`. Isso é obrigatório para que os testes unitários não dependam do Postgres.
+`tests/conftest.py` define `DATABASE_URL=sqlite://:memory:` via `os.environ.setdefault` **antes** de qualquer import de `app.*`.
 
-Padrão obrigatório nos testes que sobem a app:
+Padrão obrigatório:
 ```python
-with TestClient(app) as client:   # correto — dispara startup/shutdown do FastAPI
+with TestClient(app) as client:   # dispara startup/shutdown do FastAPI (Tortoise init)
     ...
-# TestClient(app) solto sem context manager → Tortoise não inicializa
 ```
-
-Testes de integração (que precisam de `JSONField` ou operadores JSON nativos do Postgres) são marcados com `@pytest.mark.integration` e usam o Postgres do `docker-compose.yml`.
 
 ### Configuração
 
-`app/core/config.py` usa `pydantic-settings` com `lru_cache`. Variáveis em `.env` (ver `.env.example`). As duas únicas variáveis hoje são `ENVIRONMENT` e `DATABASE_URL`.
+`app/config/settings.py` — `Settings` via `pydantic-settings` com `lru_cache`. Variáveis em `.env` (ver `.env.example`).
 
 ---
 

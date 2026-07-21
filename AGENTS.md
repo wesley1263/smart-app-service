@@ -40,7 +40,16 @@ Se uma task pedir algo que conflita com esta tabela, o agente deve **parar e sin
 - PostgreSQL via Tortoise ORM (async nativo) + asyncpg, migrações com Aerich — entidades estruturais (child, chapter, node, evidence, state) são tabelas relacionais com FK entre si; campos de conteúdo gerado por IA (`content_blocks`, `expected_keywords`) usam `JSONField`
 - Versionamento de Learning Node é feito por `create()` de nova linha (nunca `update()` de conteúdo já existente) — é assim que "o papel é imutável" se traduz em nível de banco
 - pytest + pytest-asyncio, com Tortoise apontando para `sqlite://:memory:` em testes unitários (sem depender de Postgres real); testes de integração usam o Postgres do `docker-compose.yml`
-- Estrutura de diretórios: um pacote por motor em `app/engines/<engine>/`, cada um com `service.py`, `schemas.py` (Pydantic), `models.py` (Tortoise models), `router.py`
+- Estrutura de diretórios: um pacote por módulo em `app/modules/<modulo>/`, seguindo o padrão BoilerplateV2:
+  - `models/<entidade>.py` — Tortoise ORM models
+  - `dtos.py` — schemas Pydantic (Create/Get DTOs)
+  - `repositories/<entidade>_repository.py` — acesso a dados (herda de `common/abstracts/repository.py`)
+  - `use_cases/<acao>_<entidade>.py` — uma classe por operação de negócio
+  - `api/v1/routes.py` — FastAPI router (prefixo `/api/v1/<recurso>`)
+- DI via `app/core/dependencies.py` (`DependencyInjectionContainer`) — container injetado nas rotas via `Depends(container.<use_case>)`
+- Resposta padrão: `Response[T]` genérico em `app/modules/common/dtos/response.py`
+- Erros de negócio: `UseCaseException` em `app/modules/common/exceptions/use_case_exception.py` — nunca HTTP exceptions direto nos use cases
+- Rotas registradas centralmente em `app/core/routers.py`; settings em `app/config/settings.py`
 
 Não trocar de stack silenciosamente. Se uma spec exigir algo que o stack atual não suporta bem, abrir uma ADR nova propondo a mudança — não decidir sozinho.
 
