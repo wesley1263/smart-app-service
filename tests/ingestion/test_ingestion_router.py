@@ -25,7 +25,7 @@ CHAPTER_PAYLOAD = {
 }
 
 
-def test_post_chapter_text_returns_ready():
+def test_post_chapter_text_returns_ready() -> None:
     """Dado texto colado, quando processado, então status==ready e segments não-vazio."""
     with TestClient(app) as client:
         response = client.post(BASE_URL, json=CHAPTER_PAYLOAD)
@@ -36,14 +36,14 @@ def test_post_chapter_text_returns_ready():
     assert "chapter_id" in body["data"]
 
 
-def test_post_chapter_returns_chapter_id():
+def test_post_chapter_returns_chapter_id() -> None:
     """chapter_id é um UUID válido."""
     with TestClient(app) as client:
         response = client.post(BASE_URL, json=CHAPTER_PAYLOAD)
     uuid.UUID(response.json()["data"]["chapter_id"])  # levanta ValueError se inválido
 
 
-def test_get_chapter_returns_persisted_data():
+def test_get_chapter_returns_persisted_data() -> None:
     """Dado um capítulo criado, GET retorna status e segmentos."""
     with TestClient(app) as client:
         create = client.post(BASE_URL, json=CHAPTER_PAYLOAD)
@@ -55,7 +55,7 @@ def test_get_chapter_returns_persisted_data():
     assert body["data"]["segments"] is not None
 
 
-def test_school_start_date_persisted():
+def test_school_start_date_persisted() -> None:
     """school_start_date é persistido e recuperável via GET."""
     with TestClient(app) as client:
         create = client.post(BASE_URL, json=CHAPTER_PAYLOAD)
@@ -64,13 +64,13 @@ def test_school_start_date_persisted():
     assert response.json()["data"]["school_start_date"] == "2026-08-10"
 
 
-def test_get_unknown_chapter_returns_404():
+def test_get_unknown_chapter_returns_404() -> None:
     with TestClient(app) as client:
         response = client.get(f"{BASE_URL}/{uuid.uuid4()}")
     assert response.status_code == 404
 
 
-def test_post_chapter_image_source_returns_failed():
+def test_post_chapter_image_source_returns_failed() -> None:
     """Dado source do tipo image, quando enviado, então status==failed e reason_code preenchido.
 
     OCR ainda não implementado — spec 01 seção 9 (pergunta em aberto sobre motor de OCR).
@@ -87,7 +87,7 @@ def test_post_chapter_image_source_returns_failed():
     assert body["data"]["reason_code"] == "not_implemented"
 
 
-def test_post_chapter_link_source_returns_failed():
+def test_post_chapter_link_source_returns_failed() -> None:
     """Dado source do tipo link, quando enviado, então status==failed."""
     payload = {
         **CHAPTER_PAYLOAD,
@@ -100,7 +100,7 @@ def test_post_chapter_link_source_returns_failed():
     assert response.json()["data"]["reason_code"] == "not_implemented"
 
 
-def test_text_with_single_paragraph_creates_one_segment():
+def test_text_with_single_paragraph_creates_one_segment() -> None:
     """Texto sem duplo-newline gera exatamente 1 segmento."""
     payload = {
         **CHAPTER_PAYLOAD,
@@ -111,7 +111,7 @@ def test_text_with_single_paragraph_creates_one_segment():
     assert response.json()["data"]["segments"] == ["Conteúdo único sem quebras de parágrafo."]
 
 
-def test_text_segments_exclude_empty_lines():
+def test_text_segments_exclude_empty_lines() -> None:
     """Linhas em branco extras entre parágrafos não viram segmentos vazios."""
     payload = {
         **CHAPTER_PAYLOAD,
