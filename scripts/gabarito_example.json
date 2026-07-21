@@ -1,0 +1,14 @@
+{
+  "foto01.jpg": {
+    "node": "Célula",
+    "expected_keywords": ["membrana plasmática", "núcleo", "mitocôndria", "citoplasma", "ribossomo"]
+  },
+  "foto02.jpg": {
+    "node": "Fotossíntese",
+    "expected_keywords": ["luz solar", "clorofila", "glicose", "CO2", "oxigênio", "cloroplasto"]
+  },
+  "foto03.jpg": {
+    "node": "Sistema Solar",
+    "expected_keywords": ["Sol", "planeta", "órbita", "gravidade", "satélite"]
+  }
+}
